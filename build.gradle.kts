@@ -1,7 +1,6 @@
 plugins {
     kotlin("jvm") version "1.8.0"
     kotlin("kapt") version "1.8.0"
-    application
     id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
@@ -36,7 +35,15 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+    kotlinOptions.jvmTarget = "11"
+}
 
-kotlin {
-    jvmToolchain(11)
+tasks.withType(Zip::class.java) {
+    from("compileJava")
+    from("compileKotlin")
+    from("processResources")
+    into("lib") {
+        from("configurations.runtimeClasspath")
+    }
 }
