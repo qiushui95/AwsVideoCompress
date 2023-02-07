@@ -19,11 +19,19 @@ class CallHandler : RequestStreamHandler {
         const val FFMPEG_NAME = "ffmpeg"
     }
 
-    private val shellFile = File("/tmp", FFMPEG_NAME)
+    private val shellFile = File("/opt", FFMPEG_NAME)
 
     override fun handleRequest(input: InputStream?, output: OutputStream?, context: Context?) = runBlocking<Unit> {
         input ?: throw RuntimeException("input is null")
         context ?: throw RuntimeException("context is null")
+
+        context.logger.log(shellFile.exists().toString())
+
+        File("/opt").listFiles()?.forEach {
+            context.logger.log(it.absolutePath)
+        }
+
+        return@runBlocking
 
         context.logger.log("开始处理任务")
 
@@ -53,15 +61,11 @@ class CallHandler : RequestStreamHandler {
             s3Client.getObjectAttributes(request).objectSize()
         }
 
-        val exportShellJob = exportShell()
 
         val srcFile = dloadVideo(s3Client, srcBucket, srcKey).await()
 
         if (srcFile.length() != srcSizeDeferred.await()) throw RuntimeException("视频下载失败")
 
-        exportShellJob.join()
-
-        if (shellFile.exists().not()) throw RuntimeException("ffmpeg导出失败")
 
         val process = Runtime.getRuntime().exec(arrayOf(shellFile.absolutePath, "-i", srcFile.absolutePath))
 
@@ -124,18 +128,6 @@ class CallHandler : RequestStreamHandler {
         }.join()
 
         context.logger.log("压缩结束,压缩成功:${srcFile.length() == dstFile.length()},dstFile.length()")
-    }
-
-    private fun CoroutineScope.exportShell() = launch(Dispatchers.IO) {
-
-        CallHandler::class.java.getResourceAsStream(FFMPEG_NAME)?.use { input ->
-
-            shellFile.outputStream().use { output ->
-                input.copyTo(output)
-            }
-        }
-
-        Runtime.getRuntime().exec("chmod 777 ${shellFile.absolutePath}").waitFor()
     }
 
     private fun CoroutineScope.dloadVideo(
