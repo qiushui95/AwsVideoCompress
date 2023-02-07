@@ -57,7 +57,6 @@ class CallHandler : RequestStreamHandler {
 
         if (srcFile.length() != srcSizeDeferred.await()) throw RuntimeException("视频下载失败")
 
-
         val fileObject = MultimediaObject(srcFile) { shellFile.absolutePath }
 
         val videoInfo = fileObject.info.video
@@ -68,8 +67,6 @@ class CallHandler : RequestStreamHandler {
         val frameRate = videoInfo.frameRate
 
         val cmdBuilder = StringBuilder()
-
-        cmdBuilder.append("sudo chmod 777 ${shellFile.absolutePath} && ")
 
         cmdBuilder.append(shellFile.absolutePath)
             .append(" -i ${srcFile.absolutePath}")
