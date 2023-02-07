@@ -141,7 +141,7 @@ class CallHandler : RequestStreamHandler {
         if (dstFile.exists().not()) {
             throw RuntimeException("压缩失败,压缩结果不存在")
         } else if (srcFile.length() <= dstFile.length()) {
-            throw RuntimeException("压缩失败,压缩结果变大")
+            throw RuntimeException("压缩失败,压缩结果变大,${srcFile.length()},${dstFile.length()}")
         } else if (dstFile.length() <= 0) {
             throw RuntimeException("压缩失败,压缩结果为0")
         }
