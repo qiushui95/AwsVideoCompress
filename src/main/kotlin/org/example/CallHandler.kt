@@ -25,14 +25,6 @@ class CallHandler : RequestStreamHandler {
         input ?: throw RuntimeException("input is null")
         context ?: throw RuntimeException("context is null")
 
-        context.logger.log(shellFile.exists().toString())
-
-        File("/opt").listFiles()?.forEach {
-            context.logger.log(it.absolutePath)
-        }
-
-        return@runBlocking
-
         context.logger.log("开始处理任务")
 
         val callParamInfo = input.use {
@@ -60,20 +52,11 @@ class CallHandler : RequestStreamHandler {
 
             s3Client.getObjectAttributes(request).objectSize()
         }
-
-
+        
         val srcFile = dloadVideo(s3Client, srcBucket, srcKey).await()
 
         if (srcFile.length() != srcSizeDeferred.await()) throw RuntimeException("视频下载失败")
 
-
-        val process = Runtime.getRuntime().exec(arrayOf(shellFile.absolutePath, "-i", srcFile.absolutePath))
-
-        for (line in process.errorStream.bufferedReader().lines()) {
-            context.logger.log("info:$line")
-        }
-
-        process.waitFor()
 
         val fileObject = MultimediaObject(srcFile) { shellFile.absolutePath }
 
