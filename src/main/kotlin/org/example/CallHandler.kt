@@ -223,7 +223,7 @@ class CallHandler : RequestStreamHandler {
 
         context.logger.log("开始上传")
 
-        val response = s3Client.putObject(request, RequestBody.fromFile(file))
+        s3Client.putObject(request, RequestBody.fromFile(file))
 
         context.logger.log("结束上传")
     }
@@ -244,7 +244,7 @@ class CallHandler : RequestStreamHandler {
 
         if (md5Str.isBlank()) throw RuntimeException("${file.absolutePath} md5 is null")
 
-        return md5Str
+        return md5Str.uppercase()
     }
 
     private suspend fun postResult(httpApis: HttpApis, srcMd5: String, srcKey: String, dstKey: String) {
