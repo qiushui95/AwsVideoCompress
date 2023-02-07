@@ -17,18 +17,22 @@ class Handler : RequestHandler<S3Event, Unit> {
     private val shellFile = File("/tmp", FFMPEG_NAME)
 
     override fun handleRequest(input: S3Event?, context: Context?) = runBlocking<Unit> {
-        input ?: return@runBlocking
-        context ?: return@runBlocking
+        input ?: throw RuntimeException("input is null")
+        context ?: throw RuntimeException("context is null")
 
-        val record = input.records.getOrNull(0) ?: return@runBlocking
+        context.logger.log("开始处理任务")
+
+        val record = input.records.getOrNull(0) ?: throw RuntimeException("record is null")
+
 
         val srcBucket = record.s3.bucket.name
         val srcKey = record.s3.`object`.urlDecodedKey
         val srcSize = record.s3.`object`.sizeAsLong
 
+        context.logger.log("当前处理文件:s3://${srcBucket}/${srcKey}")
+
         val s3Client = S3Client.builder()
             .build()
-
 
         val exportShellJob = exportShell()
 
