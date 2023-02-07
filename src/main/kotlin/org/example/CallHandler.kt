@@ -137,9 +137,13 @@ class CallHandler : RequestStreamHandler {
         launch(Dispatchers.IO) {
             Runtime.getRuntime().exec(cmd).waitFor()
         }.join()
-        
-        if (dstFile.exists().not() || srcFile.length() <= dstFile.length() || dstFile.length() <= 0) {
-            throw RuntimeException("压缩失败")
+
+        if (dstFile.exists().not()) {
+            throw RuntimeException("压缩失败,压缩结果不存在")
+        } else if (srcFile.length() <= dstFile.length()) {
+            throw RuntimeException("压缩失败,压缩结果变大")
+        } else if (dstFile.length() <= 0) {
+            throw RuntimeException("压缩失败,压缩结果为0")
         }
 
         context.logger.log("压缩成功,${srcFile.length()},${dstFile.length()}")
