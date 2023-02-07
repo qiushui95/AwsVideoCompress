@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -35,7 +36,15 @@ class CallHandler : RequestStreamHandler {
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
-        val okHttpClient = OkHttpClient.Builder().build()
+        val interceptor = HttpLoggingInterceptor {
+            context.logger.log("http:$it")
+        }
+
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
+
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor(interceptor)
+            .build()
 
         val retrofit = Retrofit.Builder()
             .baseUrl(baseUrl)
@@ -84,7 +93,7 @@ class CallHandler : RequestStreamHandler {
 
         val videoInfo = fileObject.info.video
 
-        val bitrate = videoInfo.bitRate/1000
+        val bitrate = videoInfo.bitRate / 1000
         val width = videoInfo.size.width
         val height = videoInfo.size.height
         val frameRate = videoInfo.frameRate
