@@ -1,0 +1,1 @@
+git pull && ./gradlew shadowJar && aws lambda update-function-code --function-name ssr_video_compress_s3 --zip-file fileb://build/libs/AwsVideoCompress-1.0-all.jar && aws lambda update-function-code --function-name ssr_video_compress_call --zip-file fileb://build/libs/AwsVideoCompress-1.0-all.jar
