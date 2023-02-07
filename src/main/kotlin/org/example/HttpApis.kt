@@ -11,7 +11,7 @@ interface HttpApis {
      * 获取压缩状态
      * @return true->已压缩
      */
-    @GET("")
+    @GET("v2/public/sourceIsCompress")
     suspend fun compressStatus(@Query("md5") md5: String): Boolean
 
     /**
