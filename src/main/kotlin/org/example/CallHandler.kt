@@ -84,7 +84,7 @@ class CallHandler : RequestStreamHandler {
 
         val videoInfo = fileObject.info.video
 
-        val bitrate = videoInfo.bitRate
+        val bitrate = videoInfo.bitRate/1000
         val width = videoInfo.size.width
         val height = videoInfo.size.height
         val frameRate = videoInfo.frameRate
