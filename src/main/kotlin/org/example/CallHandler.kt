@@ -94,8 +94,8 @@ class CallHandler : RequestStreamHandler {
         val videoInfo = fileObject.info.video
 
         val bitrate = videoInfo.bitRate / 1000
-        val width = videoInfo.size.width
-        val height = videoInfo.size.height
+        var width = videoInfo.size.width
+        var height = videoInfo.size.height
         val frameRate = videoInfo.frameRate
 
         context.logger.log("视频信息:bitrate:$bitrate,${width}x${height},frameRate:$frameRate")
@@ -114,16 +114,16 @@ class CallHandler : RequestStreamHandler {
         }
 
         if (width > height && height > 1080) {
-            val realWidth = width * 1080 / height
-            cmdList.add("-s ${realWidth}x1080")
+            width = width * 1080 / height
+            cmdList.add("-s ${width}x1080")
         } else if (width < height && width > 1080) {
-            val realHeight = height * 1080 / width
-            cmdList.add("-s 1080x${realHeight}")
+            height = height * 1080 / width
+            cmdList.add("-s 1080x${height}")
         }
 
         if (cmdList.size == 2) {
             context.logger.log("不需要压缩")
-            postResult(httpApis, srcMd5, srcKey, srcKey)
+            postResult(httpApis, srcMd5, srcKey, srcKey, width, height)
             s3Client.close()
             return@runBlocking
         }
@@ -132,7 +132,7 @@ class CallHandler : RequestStreamHandler {
 
         if (getS3Size(s3Client, srcBucket, dstKey) != null) {
             context.logger.log("已有压缩文件")
-            postResult(httpApis, srcMd5, srcKey, dstKey)
+            postResult(httpApis, srcMd5, srcKey, dstKey, width, height)
             s3Client.close()
             return@runBlocking
         }
@@ -161,7 +161,7 @@ class CallHandler : RequestStreamHandler {
 
         uloadVideo(context, s3Client, dstFile, srcBucket, dstKey)
 
-        postResult(httpApis, srcMd5, srcKey, dstKey)
+        postResult(httpApis, srcMd5, srcKey, dstKey, width, height)
 
         s3Client.close()
     }
@@ -247,8 +247,18 @@ class CallHandler : RequestStreamHandler {
         return md5Str.uppercase()
     }
 
-    private suspend fun postResult(httpApis: HttpApis, srcMd5: String, srcKey: String, dstKey: String) {
-        val paramInfo = ReqCompressResult(md5 = srcMd5, originKey = srcKey, compressKey = dstKey)
+    private suspend fun postResult(
+        httpApis: HttpApis,
+        srcMd5: String,
+        srcKey: String,
+        dstKey: String,
+        width: Int,
+        height: Int
+    ) {
+        val paramInfo = ReqCompressResult(
+            md5 = srcMd5, originKey = srcKey, compressKey = dstKey,
+            width = width, height = height
+        )
 
         httpApis.compressResult(paramInfo)
     }

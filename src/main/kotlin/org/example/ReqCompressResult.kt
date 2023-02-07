@@ -13,4 +13,8 @@ data class ReqCompressResult(
     val originKey: String,
     @Json(name = "new_source_path")
     val compressKey: String,
+    @Json(name = "width")
+    val width: Int,
+    @Json(name = "height")
+    val height: Int,
 )
