@@ -89,6 +89,8 @@ class CallHandler : RequestStreamHandler {
         val height = videoInfo.size.height
         val frameRate = videoInfo.frameRate
 
+        context.logger.log("视频信息:bitrate:$bitrate,${width}x${height},frameRate:$frameRate")
+
         val cmdList = mutableListOf<String>()
 
         cmdList.add(shellFile.absolutePath)
