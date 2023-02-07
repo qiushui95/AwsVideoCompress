@@ -38,6 +38,8 @@ class S3Handler : RequestHandler<S3Event, Unit> {
 
         val paramJson = MoShiFactory.getCallParamInfoAdapter().toJson(paramInfo)
 
+        context.logger.log("lambda invoke json:$paramJson")
+
         val payload = SdkBytes.fromUtf8String(paramJson)
 
         val request = InvokeRequest.builder()
