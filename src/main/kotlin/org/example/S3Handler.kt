@@ -45,7 +45,7 @@ class S3Handler : RequestHandler<S3Event, Unit> {
         val request = InvokeRequest.builder()
             .functionName("ssr_video_compress_call")
             .payload(payload)
-            .invocationType(InvocationType.DRY_RUN)
+            .invocationType(InvocationType.EVENT)
             .build()
 
         val lambdaClient = LambdaClient.builder()
