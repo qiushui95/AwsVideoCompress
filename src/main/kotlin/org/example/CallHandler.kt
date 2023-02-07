@@ -133,6 +133,10 @@ class CallHandler : RequestStreamHandler {
     ) = async(Dispatchers.IO) {
         val sourceFile = File("/tmp/$srcKey")
 
+        sourceFile.parentFile.mkdirs()
+
+        sourceFile.createNewFile()
+
         val request = GetObjectRequest.builder()
             .bucket(srcBucket)
             .key(srcKey)
