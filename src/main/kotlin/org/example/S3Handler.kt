@@ -49,6 +49,12 @@ class S3Handler : RequestHandler<S3Event, Unit> {
         val lambdaClient = LambdaClient.builder()
             .build()
 
-        lambdaClient.invoke(request)
+        val response = lambdaClient.invoke(request)
+
+        if (response.statusCode() == 204) {
+            context.logger.log("lambda异步执行")
+        } else {
+            context.logger.log("lambda执行失败,${response.functionError()}")
+        }
     }
 }
