@@ -53,7 +53,7 @@ class CallHandler : RequestStreamHandler {
             s3Client.getObjectAttributes(request).objectSize()
         }
 
-        val exportShellJob = exportShell()
+        val exportShellJob = exportShell(context)
 
         val srcFile = dloadVideo(s3Client, srcBucket, srcKey).await()
 
@@ -118,7 +118,7 @@ class CallHandler : RequestStreamHandler {
         context.logger.log("压缩结束,压缩成功:${srcFile.length() == dstFile.length()},dstFile.length()")
     }
 
-    private fun CoroutineScope.exportShell() = launch(Dispatchers.IO) {
+    private fun CoroutineScope.exportShell(context: Context) = launch(Dispatchers.IO) {
 
         CallHandler::class.java.getResourceAsStream(FFMPEG_NAME)?.use { input ->
 
@@ -127,7 +127,9 @@ class CallHandler : RequestStreamHandler {
             }
         }
 
-        Runtime.getRuntime().exec("chmod 777 ${shellFile.absolutePath}")
+        val process = Runtime.getRuntime().exec("chmod 777 ${shellFile.absolutePath}")
+
+        context.logger.log("exportShell ${process.waitFor()}")
     }
 
     private fun CoroutineScope.dloadVideo(
