@@ -1,44 +1,62 @@
 package org.example
 
 import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.RequestHandler
-import com.amazonaws.services.lambda.runtime.events.S3Event
+import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import kotlinx.coroutines.*
+import okio.Buffer
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.GetObjectAttributesRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.ObjectAttributes
 import ws.schild.jave.MultimediaObject
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 
-class Handler : RequestHandler<S3Event, Unit> {
+class CallHandler : RequestStreamHandler {
     private companion object {
         const val FFMPEG_NAME = "ffmpeg"
     }
 
     private val shellFile = File("/tmp", FFMPEG_NAME)
 
-    override fun handleRequest(input: S3Event?, context: Context?) = runBlocking<Unit> {
+    override fun handleRequest(input: InputStream?, output: OutputStream?, context: Context?) = runBlocking<Unit> {
         input ?: throw RuntimeException("input is null")
         context ?: throw RuntimeException("context is null")
 
         context.logger.log("开始处理任务")
 
-        val record = input.records.getOrNull(0) ?: throw RuntimeException("record is null")
+        val callParamInfo = input.use {
+            val buffer = Buffer()
 
+            buffer.readFrom(it)
 
-        val srcBucket = record.s3.bucket.name
-        val srcKey = record.s3.`object`.urlDecodedKey
-        val srcSize = record.s3.`object`.sizeAsLong
+            MoShiFactory.getCallParamInfoAdapter().fromJson(buffer)
+        } ?: throw RuntimeException("CallParamInfo is null")
+
+        val srcBucket = callParamInfo.srcBucket
+        val srcKey = callParamInfo.srcKey
 
         context.logger.log("当前处理文件:s3://${srcBucket}/${srcKey}")
 
         val s3Client = S3Client.builder()
             .build()
 
+        val srcSizeDeferred = async(Dispatchers.IO) {
+            val request = GetObjectAttributesRequest.builder()
+                .bucket(srcBucket)
+                .key(srcKey)
+                .objectAttributes(ObjectAttributes.OBJECT_SIZE)
+                .build()
+
+            s3Client.getObjectAttributes(request).objectSize()
+        }
+
         val exportShellJob = exportShell()
 
         val srcFile = dloadVideo(s3Client, srcBucket, srcKey).await()
 
-        if (srcFile.length() != srcSize) throw RuntimeException("视频下载失败")
+        if (srcFile.length() != srcSizeDeferred.await()) throw RuntimeException("视频下载失败")
 
         exportShellJob.join()
 
@@ -100,7 +118,7 @@ class Handler : RequestHandler<S3Event, Unit> {
     }
 
     private fun CoroutineScope.exportShell() = launch(Dispatchers.IO) {
-        Handler::class.java.getResourceAsStream(FFMPEG_NAME)?.use { input ->
+        S3Handler::class.java.getResourceAsStream(FFMPEG_NAME)?.use { input ->
 
             shellFile.outputStream().use { output ->
                 input.copyTo(output)
