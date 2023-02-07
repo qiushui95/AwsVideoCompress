@@ -134,7 +134,15 @@ class CallHandler : RequestStreamHandler {
 
         context.logger.log("压缩命令:$cmd")
 
-        context.logger.log("压缩结束,压缩成功:${srcFile.length() > dstFile.length() && dstFile.length() > 0},${srcFile.length()},${dstFile.length()}")
+        launch(Dispatchers.IO) {
+            Runtime.getRuntime().exec(cmd).waitFor()
+        }.join()
+        
+        if (dstFile.exists().not() || srcFile.length() <= dstFile.length() || dstFile.length() <= 0) {
+            throw RuntimeException("压缩失败")
+        }
+
+        context.logger.log("压缩成功,${srcFile.length()},${dstFile.length()}")
 
         uloadVideo(context, s3Client, dstFile, srcBucket, dstKey)
 
