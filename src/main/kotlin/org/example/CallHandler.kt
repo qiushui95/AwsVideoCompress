@@ -36,14 +36,8 @@ class CallHandler : RequestStreamHandler {
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
-        val interceptor = HttpLoggingInterceptor {
-            context.logger.log("http:$it")
-        }
-
-        interceptor.level = HttpLoggingInterceptor.Level.BODY
 
         val okHttpClient = OkHttpClient.Builder()
-            .addInterceptor(interceptor)
             .build()
 
         val retrofit = Retrofit.Builder()

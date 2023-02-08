@@ -16,6 +16,7 @@ import java.io.File
 class S3Handler : RequestHandler<S3Event, Unit> {
     private companion object {
         const val REGEX_OBJECT_KEY = "upload/v\\d/video/.+"
+        const val REGEX_COMPRESS_KEY = "upload/v\\d/video/.+_compress\\..+"
     }
 
     override fun handleRequest(input: S3Event?, context: Context?) {
@@ -31,6 +32,11 @@ class S3Handler : RequestHandler<S3Event, Unit> {
 
         if (srcKey.matches(Regex(REGEX_OBJECT_KEY)).not()) {
             context.logger.log("不在处理文件夹内")
+            return
+        }
+
+        if (srcKey.matches(Regex(REGEX_COMPRESS_KEY))) {
+            context.logger.log("已被压缩,不需要压缩")
             return
         }
 
