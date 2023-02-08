@@ -36,6 +36,7 @@ class CallHandler : RequestStreamHandler {
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
+
         val okHttpClient = OkHttpClient.Builder()
             .build()
 
@@ -79,6 +80,7 @@ class CallHandler : RequestStreamHandler {
 
         if (httpApis.compressStatus(srcMd5)) {
             context.logger.log("s3://${srcBucket}/${srcKey}已有被压缩的文件,跳过处理该视频")
+            postResult(s3Client, httpApis, srcMd5, srcKey, srcKey, 0, 0)
             return@runBlocking
         }
 
@@ -116,8 +118,7 @@ class CallHandler : RequestStreamHandler {
 
         if (cmdList.size == 2) {
             context.logger.log("不需要压缩")
-            postResult(httpApis, srcMd5, srcKey, srcKey, width, height)
-            s3Client.close()
+            postResult(s3Client, httpApis, srcMd5, srcKey, srcKey, width, height)
             return@runBlocking
         }
 
@@ -125,8 +126,7 @@ class CallHandler : RequestStreamHandler {
 
         if (getS3Size(s3Client, srcBucket, dstKey) != null) {
             context.logger.log("已有压缩文件")
-            postResult(httpApis, srcMd5, srcKey, dstKey, width, height)
-            s3Client.close()
+            postResult(s3Client, httpApis, srcMd5, srcKey, dstKey, width, height)
             return@runBlocking
         }
 
@@ -154,9 +154,7 @@ class CallHandler : RequestStreamHandler {
 
         uloadVideo(context, s3Client, dstFile, srcBucket, dstKey)
 
-        postResult(httpApis, srcMd5, srcKey, dstKey, width, height)
-
-        s3Client.close()
+        postResult(s3Client, httpApis, srcMd5, srcKey, dstKey, width, height)
     }
 
     private fun getS3Size(s3Client: S3Client, bucket: String, key: String): Long? {
@@ -241,6 +239,7 @@ class CallHandler : RequestStreamHandler {
     }
 
     private suspend fun postResult(
+        s3Client: S3Client,
         httpApis: HttpApis,
         srcMd5: String,
         srcKey: String,
@@ -254,6 +253,8 @@ class CallHandler : RequestStreamHandler {
         )
 
         httpApis.compressResult(paramInfo)
+
+        s3Client.close()
     }
 
     private fun getFormatKey(key: String): String {

@@ -22,7 +22,7 @@ class S3Handler : RequestHandler<S3Event, Unit> {
     override fun handleRequest(input: S3Event?, context: Context?) {
         input ?: throw RuntimeException("input is null")
         context ?: throw RuntimeException("context is null")
-        
+
         context.logger.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
         context.logger.log("开始处理任务")
