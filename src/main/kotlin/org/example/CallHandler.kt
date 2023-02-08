@@ -32,6 +32,7 @@ class CallHandler : RequestStreamHandler {
         input ?: throw RuntimeException("input is null")
         context ?: throw RuntimeException("context is null")
 
+        context.logger.log("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
