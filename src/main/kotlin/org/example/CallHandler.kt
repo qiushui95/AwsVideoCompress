@@ -35,7 +35,6 @@ class CallHandler : RequestStreamHandler {
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
-
         val okHttpClient = OkHttpClient.Builder()
             .build()
 
@@ -249,10 +248,16 @@ class CallHandler : RequestStreamHandler {
         height: Int
     ) {
         val paramInfo = ReqCompressResult(
-            md5 = srcMd5, originKey = srcKey, compressKey = dstKey,
+            md5 = srcMd5, originKey = getFormatKey(srcKey), compressKey = getFormatKey(dstKey),
             width = width, height = height
         )
 
         httpApis.compressResult(paramInfo)
+    }
+
+    private fun getFormatKey(key: String): String {
+        if (key.startsWith("/")) return key
+
+        return "/$key"
     }
 }
