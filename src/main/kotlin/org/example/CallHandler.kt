@@ -23,6 +23,7 @@ class CallHandler : RequestStreamHandler {
 
     private companion object {
         const val FFMPEG_NAME = "ffmpeg"
+        const val LIFECYCLE_BUCKET = "res-southeast-lifecycle"
         val md5: MessageDigest = MessageDigest.getInstance("MD5")
     }
 
@@ -80,7 +81,16 @@ class CallHandler : RequestStreamHandler {
 
         if (httpApis.compressStatus(srcMd5)) {
             context.logger.log("s3://${srcBucket}/${srcKey}已有被压缩的文件,跳过处理该视频")
-            postResult(s3Client, httpApis, srcMd5, srcKey, srcKey, 0, 0)
+            postResult(
+                s3Client = s3Client,
+                httpApis = httpApis,
+                srcMd5 = srcMd5,
+                srcBucket = srcBucket,
+                srcKey = srcKey,
+                dstKey = srcKey,
+                width = 0,
+                height = 0
+            )
             return@runBlocking
         }
 
@@ -94,6 +104,8 @@ class CallHandler : RequestStreamHandler {
         val frameRate = videoInfo.frameRate
 
         context.logger.log("视频信息:bitrate:$bitrate,${width}x${height},frameRate:$frameRate")
+
+        val dstKey = srcKey.removeSuffix(srcFile.name) + "${srcFile.nameWithoutExtension}_compress.mp4"
 
         val cmdList = mutableListOf<String>()
 
@@ -116,17 +128,40 @@ class CallHandler : RequestStreamHandler {
             cmdList.add("-s 1080x${height}")
         }
 
-        if (cmdList.size == 2) {
+        if (cmdList.size == 2 && srcFile.extension == "mp4") {
             context.logger.log("不需要压缩")
-            postResult(s3Client, httpApis, srcMd5, srcKey, srcKey, width, height)
+            copyS3Object(
+                s3Client = s3Client,
+                srcBucket = srcBucket,
+                srcKey = srcKey,
+                dstBucket = srcBucket,
+                dstKey = dstKey
+            )
+            postResult(
+                s3Client = s3Client,
+                httpApis = httpApis,
+                srcMd5 = srcMd5,
+                srcBucket = srcBucket,
+                srcKey = srcKey,
+                dstKey = dstKey,
+                width = width,
+                height = height
+            )
             return@runBlocking
         }
 
-        val dstKey = srcKey.removeSuffix(srcFile.name) + "${srcFile.nameWithoutExtension}_compress.${srcFile.extension}"
-
         if (getS3Size(s3Client, srcBucket, dstKey) != null) {
             context.logger.log("已有压缩文件")
-            postResult(s3Client, httpApis, srcMd5, srcKey, dstKey, width, height)
+            postResult(
+                s3Client = s3Client,
+                httpApis = httpApis,
+                srcMd5 = srcMd5,
+                srcBucket = srcBucket,
+                srcKey = srcKey,
+                dstKey = dstKey,
+                width = width,
+                height = height
+            )
             return@runBlocking
         }
 
@@ -154,7 +189,16 @@ class CallHandler : RequestStreamHandler {
 
         uloadVideo(context, s3Client, dstFile, srcBucket, dstKey)
 
-        postResult(s3Client, httpApis, srcMd5, srcKey, dstKey, width, height)
+        postResult(
+            s3Client = s3Client,
+            httpApis = httpApis,
+            srcMd5 = srcMd5,
+            srcBucket = srcBucket,
+            srcKey = srcKey,
+            dstKey = dstKey,
+            width = width,
+            height = height
+        )
     }
 
     private fun getS3Size(s3Client: S3Client, bucket: String, key: String): Long? {
@@ -242,11 +286,14 @@ class CallHandler : RequestStreamHandler {
         s3Client: S3Client,
         httpApis: HttpApis,
         srcMd5: String,
+        srcBucket: String,
         srcKey: String,
         dstKey: String,
         width: Int,
         height: Int
     ) {
+        copyS3Object(s3Client, srcBucket, srcKey, LIFECYCLE_BUCKET, srcKey)
+
         val paramInfo = ReqCompressResult(
             md5 = srcMd5, originKey = getFormatKey(srcKey), compressKey = getFormatKey(dstKey),
             width = width, height = height
@@ -255,6 +302,22 @@ class CallHandler : RequestStreamHandler {
         httpApis.compressResult(paramInfo)
 
         s3Client.close()
+    }
+
+    private fun copyS3Object(
+        s3Client: S3Client, srcBucket: String,
+        srcKey: String,
+        dstBucket: String,
+        dstKey: String,
+    ) {
+        val request = CopyObjectRequest.builder()
+            .destinationBucket(dstBucket)
+            .destinationKey(dstKey)
+            .sourceBucket(srcBucket)
+            .sourceKey(srcKey)
+            .build()
+
+        s3Client.copyObject(request).copyObjectResult()
     }
 
     private fun getFormatKey(key: String): String {
