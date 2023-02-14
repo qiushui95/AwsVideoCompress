@@ -4,6 +4,7 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.RequestStreamHandler
 import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
@@ -38,12 +39,15 @@ class CallHandler : RequestStreamHandler {
 
         val baseUrl = System.getenv("base_url") ?: throw RuntimeException("base url is null")
 
+        val interceptor = HttpLoggingInterceptor { context.logger.log(it) }
+        interceptor.level = HttpLoggingInterceptor.Level.BODY
 
         val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(60,TimeUnit.SECONDS)
-            .writeTimeout(60,TimeUnit.SECONDS)
-            .readTimeout(60,TimeUnit.SECONDS)
-            .callTimeout(60,TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(60, TimeUnit.SECONDS)
+            .addInterceptor(interceptor)
             .build()
 
         val retrofit = Retrofit.Builder()
