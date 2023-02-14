@@ -17,6 +17,7 @@ import java.io.OutputStream
 import java.math.BigInteger
 import java.nio.file.Files
 import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
 
 class CallHandler : RequestStreamHandler {
@@ -39,6 +40,10 @@ class CallHandler : RequestStreamHandler {
 
 
         val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(60,TimeUnit.SECONDS)
+            .writeTimeout(60,TimeUnit.SECONDS)
+            .readTimeout(60,TimeUnit.SECONDS)
+            .callTimeout(60,TimeUnit.SECONDS)
             .build()
 
         val retrofit = Retrofit.Builder()
@@ -180,7 +185,16 @@ class CallHandler : RequestStreamHandler {
         if (dstFile.exists().not()) {
             throw RuntimeException("压缩失败,压缩结果不存在")
         } else if (srcFile.length() <= dstFile.length()) {
-            throw RuntimeException("压缩失败,压缩结果变大,${srcFile.length()},${dstFile.length()}")
+            context.logger.log("压缩失败,压缩结果变大,${srcFile.length()},${dstFile.length()}")
+
+            copyS3Object(
+                s3Client = s3Client,
+                srcBucket = srcBucket,
+                srcKey = srcKey,
+                dstBucket = srcBucket,
+                dstKey = dstKey
+            )
+
         } else if (dstFile.length() <= 0) {
             throw RuntimeException("压缩失败,压缩结果为0")
         }
@@ -293,6 +307,13 @@ class CallHandler : RequestStreamHandler {
         height: Int
     ) {
         copyS3Object(s3Client, srcBucket, srcKey, LIFECYCLE_BUCKET, srcKey)
+
+        val request = DeleteObjectRequest.builder()
+            .bucket(srcBucket)
+            .key(srcKey)
+            .build()
+
+        s3Client.deleteObject(request)
 
         val paramInfo = ReqCompressResult(
             md5 = srcMd5, originKey = getFormatKey(srcKey), compressKey = getFormatKey(dstKey),
