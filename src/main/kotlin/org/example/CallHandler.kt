@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import kotlin.io.path.Path
+import kotlin.math.max
 
 class CallHandler : RequestStreamHandler {
 
@@ -295,9 +296,17 @@ class CallHandler : RequestStreamHandler {
 
         val md5Str = BigInteger(1, md5.digest()).toString(16)
 
-        if (md5Str.isBlank()) throw RuntimeException("${file.absolutePath} md5 is null")
+        val md5Builder = StringBuilder()
 
-        return md5Str.uppercase()
+        md5Builder.append(md5Str)
+
+        repeat(max(32 - md5Str.length, 0)) {
+            md5Builder.insert(0, 0)
+        }
+
+        if (md5Builder.isBlank()) throw RuntimeException("${file.absolutePath} md5 is null")
+
+        return md5Builder.toString().uppercase()
     }
 
     private suspend fun postResult(
